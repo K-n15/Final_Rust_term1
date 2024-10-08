@@ -37,6 +37,7 @@ struct Status {
     battery : f32,
     uptime : Duration,
 }
+
 fn update(value: &mut Status, message: Computer) {
     let info = infodump::Status::getinfo();
     match message {
