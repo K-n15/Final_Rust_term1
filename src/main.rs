@@ -1,11 +1,11 @@
 use std::time::Duration;
-use iced::{widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element};
+use iced::{alignment::Horizontal::Left, widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element, Length::{Fill, Shrink}};
 use systemstat::ByteSize;
 
 pub mod infodump;
 
 fn main() -> iced::Result {
-    iced::application("Status Manager", update, view).run()
+    iced::application("Status Manager", update, view).window_size(iced::Size { width: 700.0, height: 400.0 } ).run()
 }
 
 #[derive(Debug, Clone)]
@@ -72,7 +72,8 @@ fn view(value: &Status) -> Element<Computer> {
             text(format!("CPU status as mean : {}",value.cpu_usage))
         ].spacing(20),
         row![button("Memory").on_press(Computer::MemoryUsed),
-            text(format!("Memory {}/{} Byte",value.memory_used,value.memory_total))
+            text(format!("Memory {}/{} Byte",value.memory_used,value.memory_total)),
+            progress_bar(0.0..=value.memory_total.as_u64() as f32, value.memory_used.as_u64() as f32).width(100)
         ].spacing(20),
         row![button("Disk Input").on_press(Computer::DiskRead),
             text(format!("Disk Input {}/{}",value.disk_read,value.tdisk_read))
@@ -88,8 +89,8 @@ fn view(value: &Status) -> Element<Computer> {
         ].spacing(20),
         row![button("Battery").on_press(Computer::Battery),
             text(format!("Battery Status {}%",value.battery*100.0)),
-            progress_bar(0.0..=100.0, value.battery*100.0)
+            progress_bar(0.0..=100.0, value.battery*100.0).width(100)
         ].spacing(20),
-    ].align_x(Center).width(600).height(600).spacing(10)
+    ].align_x(Left).width(Fill).height(Fill).spacing(10)
     ).align_x(Center).align_y(Center).into()
 }
