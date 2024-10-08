@@ -7,7 +7,7 @@ pub mod infodump;
 fn main() -> iced::Result {
     iced::application("Status Manager", update, view).run()
 }
-//todo :
+
 #[derive(Debug, Clone)]
 enum Computer {
     CpuUsage,
