@@ -1,0 +1,9 @@
+[package]
+name = "Final_Rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+iced = {version = "0.13.1"}
+sysinfo = "0.31.4"
+systemstat = "0.2.3"
