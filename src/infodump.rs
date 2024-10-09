@@ -1,7 +1,5 @@
-use std::time::Duration;
-
 use sysinfo::{Networks, System,};
-use systemstat::{saturating_sub_bytes, BatteryLife, ByteSize, OffsetDateTime, Platform};
+use systemstat::{saturating_sub_bytes, BatteryLife, ByteSize, Platform};
 
 pub struct Status {
     pub cpu_usage : f32,
@@ -14,15 +12,15 @@ pub struct Status {
     pub network_receive : u64,
     pub network_transmit : u64,
     pub battery : BatteryLife,
-    pub uptime : Duration,
-    pub boottime : OffsetDateTime,
+    pub uptime : u64,
+    pub boottime : u64,
 }
 
 impl Status{
     pub fn getinfo()->Status{
         let mut info = System::new_all();
         info.refresh_all();
-        let mut total_cpu = info.global_cpu_usage();
+        let total_cpu = info.global_cpu_usage();
 
         let mut total_read = 0;
         let mut total_write = 0;
@@ -53,8 +51,8 @@ impl Status{
         let new = systemstat::System::new();
         let battery_life = new.battery_life().unwrap();
 
-        let uptime = new.uptime().unwrap();
-        let boottime = new.boot_time().unwrap();
+        let uptime = System::uptime();
+        let boottime = System::boot_time();
 
         let memo = new.memory().unwrap();
 

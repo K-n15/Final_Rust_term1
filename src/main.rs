@@ -1,11 +1,12 @@
-use std::time::Duration;
-use iced::{alignment::Horizontal::Left, widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element, Length::{Fill, Shrink}};
+use iced::{alignment::Horizontal::Left, widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element, Length::Fill};
 use systemstat::ByteSize;
 
 pub mod infodump;
 
 fn main() -> iced::Result {
-    iced::application("Status Manager", update, view).window_size(iced::Size { width: 700.0, height: 400.0 } ).run()
+    iced::application("Status Manager", update, view)
+    .window_size(iced::Size { width: 700.0, height: 400.0 } )
+    .run()
 }
 
 #[derive(Debug, Clone)]
@@ -21,6 +22,7 @@ enum Computer {
     NetTransmit,
     Battery,
     UpTime,
+    BootTime,
 }
 
 #[derive(Default)]
@@ -35,7 +37,8 @@ struct Status {
     network_receive : u64,
     network_transmit : u64,
     battery : f32,
-    uptime : Duration,
+    uptime : u64,
+    boottime : u64
 }
 
 fn update(value: &mut Status, message: Computer) {
@@ -61,6 +64,7 @@ fn update(value: &mut Status, message: Computer) {
         Computer::NetTransmit => value.network_transmit = info.network_transmit,
         Computer::Battery => value.battery = info.battery.remaining_capacity,
         Computer::UpTime => value.uptime = info.uptime,
+        Computer::BootTime => value.boottime = info.boottime,
     }
 }
 
@@ -91,6 +95,22 @@ fn view(value: &Status) -> Element<Computer> {
             text(format!("Battery Status {}%",value.battery*100.0)),
             progress_bar(0.0..=100.0, value.battery*100.0).width(100)
         ].spacing(20),
+        row![button("Refresh").on_press(Computer::BootTime),
+            text(format!("System booted since {} ",time_convert(value.boottime)))
+        ].spacing(20),
+        row![button("Refresh").on_press(Computer::UpTime),
+            text(format!("System running since {} ",time_convert(value.uptime)))
+        ].spacing(20),
     ].align_x(Left).width(Fill).height(Fill).spacing(10)
     ).align_x(Center).align_y(Center).into()
+}
+
+fn time_convert(x:u64)->String{
+    if x >= 3600{
+        format!("{} hours",x/3600)
+    } else if x >=60 {
+        format!("{} minutes",x/60)
+    } else {
+        format!("{} seconds",x)
+    }
 }
