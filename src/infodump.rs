@@ -22,11 +22,7 @@ impl Status{
     pub fn getinfo()->Status{
         let mut info = System::new_all();
         info.refresh_all();
-        let mut total_cpu = 0.0;
-        for i in info.cpus(){
-            total_cpu += i.cpu_usage();
-        }
-        total_cpu /= info.cpus().len() as f32;
+        let mut total_cpu = info.global_cpu_usage();
 
         let mut total_read = 0;
         let mut total_write = 0;
