@@ -4,8 +4,8 @@ use systemstat::ByteSize;
 pub mod infodump;
 
 fn main() -> iced::Result {
-    iced::application("Status Manager", update, view)
-    .window_size(iced::Size { width: 700.0, height: 400.0 } )
+    iced::application("Status Manager", Status::update, Status::view)
+    .window_size(iced::Size { width: 700.0, height: 500.0 } )
     .run()
 }
 
@@ -23,7 +23,7 @@ enum Computer {
     Battery,
     UpTime,
     BootTime,
-    RefreshAll,
+    RefreshAll
 }
 
 
@@ -43,84 +43,88 @@ struct Status {
     boottime : u64
 }
 
-fn update(value: &mut Status, message: Computer) {
+fn flush(value: &mut Status, _message: Computer){
+    Status::update(value, Computer::CpuUsage);
+    Status::update(value, Computer::MemoryUsed);
+    Status::update(value, Computer::MemoryTotal);
+    Status::update(value, Computer::DiskRead);
+    Status::update(value, Computer::DiskWrite);
+    Status::update(value, Computer::TotalRead);
+    Status::update(value, Computer::TotalWrite);
+    Status::update(value, Computer::NetReceive);
+    Status::update(value, Computer::NetTransmit);
+    Status::update(value, Computer::Battery);
+    Status::update(value, Computer::UpTime);
+    Status::update(value, Computer::BootTime);
+}
+
+impl Status{
+fn update(&mut self, message: Computer) {
     let info = infodump::Status::getinfo();
     match message {
-        Computer::CpuUsage => value.cpu_usage = info.cpu_usage,
+        Computer::CpuUsage => self.cpu_usage = info.cpu_usage,
         Computer::MemoryUsed => {
-            update(value, Computer::MemoryTotal);
-            value.memory_used = info.memory_used
+            Status::update(self, Computer::MemoryTotal);
+            self.memory_used = info.memory_used
         },
-        Computer::MemoryTotal => value.memory_total = info.memory_total,
+        Computer::MemoryTotal => self.memory_total = info.memory_total,
         Computer::DiskRead => {
-            update(value, Computer::TotalRead);
-            value.disk_read = info.disk_read
+            Status::update(self, Computer::TotalRead);
+            self.disk_read = info.disk_read
         },
         Computer::DiskWrite => {
-            update(value, Computer::TotalWrite);
-            value.disk_write = info.disk_write
+            Status::update(self, Computer::TotalWrite);
+            self.disk_write = info.disk_write
         },
-        Computer::TotalRead => value.tdisk_read = info.tdisk_read,
-        Computer::TotalWrite => value.tdisk_write = info.tdisk_write,
-        Computer::NetReceive => value.network_receive = info.network_receive,
-        Computer::NetTransmit => value.network_transmit = info.network_transmit,
-        Computer::Battery => value.battery = info.battery.remaining_capacity,
-        Computer::UpTime => value.uptime = info.uptime,
-        Computer::BootTime => value.boottime = info.boottime,
-        Computer::RefreshAll =>{
-        update(value, Computer::CpuUsage);
-        update(value, Computer::MemoryUsed);
-        update(value, Computer::MemoryTotal);
-        update(value, Computer::DiskRead);
-        update(value, Computer::DiskWrite);
-        update(value, Computer::TotalRead);
-        update(value, Computer::TotalWrite);
-        update(value, Computer::NetReceive);
-        update(value, Computer::NetTransmit);
-        update(value, Computer::Battery);
-        update(value, Computer::UpTime);
-        update(value, Computer::BootTime);
-        }
+        Computer::TotalRead => self.tdisk_read = info.tdisk_read,
+        Computer::TotalWrite => self.tdisk_write = info.tdisk_write,
+        Computer::NetReceive => self.network_receive = info.network_receive,
+        Computer::NetTransmit => self.network_transmit = info.network_transmit,
+        Computer::Battery => self.battery = info.battery.remaining_capacity,
+        Computer::UpTime => self.uptime = info.uptime,
+        Computer::BootTime => self.boottime = info.boottime,
+        Computer::RefreshAll =>flush(self, message),
     }
 }
 
-fn view(value: &Status) -> Element<Computer> {
+fn view(&self) -> Element<Computer> {
     container(
     column![
         row![text(" ")],
-        row![button("CPU usage").on_press(Computer::CpuUsage),
-            text(format!("CPU status as mean : {}",value.cpu_usage))
+        row![button("Refresh").on_press(Computer::CpuUsage),
+            text(format!("CPU status as mean : {}",self.cpu_usage))
         ].spacing(20),
-        row![button("Memory").on_press(Computer::MemoryUsed),
-            text(format!("Memory {}/{} Byte",value.memory_used,value.memory_total)),
-            progress_bar(0.0..=value.memory_total.as_u64() as f32, value.memory_used.as_u64() as f32).width(100)
+        row![button("Refresh").on_press(Computer::MemoryUsed),
+            text(format!("Memory {}/{} Byte",self.memory_used,self.memory_total)),
+            progress_bar(0.0..=self.memory_total.as_u64() as f32, self.memory_used.as_u64() as f32).width(100)
         ].spacing(20),
-        row![button("Disk Input").on_press(Computer::DiskRead),
-            text(format!("Disk Input {}/{}",value.disk_read,value.tdisk_read))
+        row![button("Refresh").on_press(Computer::DiskRead),
+            text(format!("Disk Input {}/{}",self.disk_read,self.tdisk_read))
         ].spacing(20),
-        row![button("Disk Output").on_press(Computer::DiskWrite),
-            text(format!("Disk Output {}/{}",value.disk_write,value.tdisk_write))
+        row![button("Refresh").on_press(Computer::DiskWrite),
+            text(format!("Disk Output {}/{}",self.disk_write,self.tdisk_write))
         ].spacing(20),
-        row![button("Network Receive").on_press(Computer::NetReceive),
-            text(format!("Network Received {} B",value.network_receive))
+        row![button("Refresh").on_press(Computer::NetReceive),
+            text(format!("Network Received {} B",self.network_receive))
         ].spacing(20),
-        row![button("Network Transmit").on_press(Computer::NetTransmit),
-            text(format!("Network Transmitted {} B",value.network_transmit))
+        row![button("Refresh").on_press(Computer::NetTransmit),
+            text(format!("Network Transmitted {} B",self.network_transmit))
         ].spacing(20),
-        row![button("Battery").on_press(Computer::Battery),
-            text(format!("Battery Status {}%",value.battery*100.0)),
-            progress_bar(0.0..=100.0, value.battery*100.0).width(100)
+        row![button("Refresh").on_press(Computer::Battery),
+            text(format!("Battery Status {}%",self.battery*100.0)),
+            progress_bar(0.0..=100.0, self.battery*100.0).width(100)
         ].spacing(20),
         row![button("Refresh").on_press(Computer::BootTime),
-            text(format!("System booted since {} ",time_convert(value.boottime)))
+            text(format!("System booted since {} ",time_convert(self.boottime)))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::UpTime),
-            text(format!("System running since {} ",time_convert(value.uptime)))
+            text(format!("System running since {} ",time_convert(self.uptime)))
         ].spacing(20),
+        row![button("Refresh All").on_press(Computer::RefreshAll)].spacing(20),
     ].align_x(Left).width(Fill).height(Fill).spacing(10)
     ).align_x(Center).align_y(Center).into()
 }
-
+}
 fn time_convert(x:u64)->String{
     if x >= 3600{
         format!("{} hours",x/3600)
