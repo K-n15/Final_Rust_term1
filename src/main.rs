@@ -1,11 +1,12 @@
-use iced::{alignment::Horizontal::Left, widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element, Length::Fill};
+use iced::{alignment::Horizontal::Left, widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element, Length::Fill, Subscription};
 use systemstat::ByteSize;
 
 pub mod infodump;
 
 fn main() -> iced::Result {
     iced::application("Status Manager", Status::update, Status::view)
-    .window_size(iced::Size { width: 700.0, height: 500.0 } )
+    .subscription(Status::subscription)
+    .window_size(iced::Size { width: 500.0, height: 500.0 } )
     .run()
 }
 
@@ -40,27 +41,30 @@ struct Status {
     network_transmit : u64,
     battery : f32,
     uptime : u64,
-    boottime : u64
+    boottime : u64,
+    last_update : f32,
 }
 
-fn flush(value: &mut Status, _message: Computer){
-    Status::update(value, Computer::CpuUsage);
-    Status::update(value, Computer::MemoryUsed);
-    Status::update(value, Computer::MemoryTotal);
-    Status::update(value, Computer::DiskRead);
-    Status::update(value, Computer::DiskWrite);
-    Status::update(value, Computer::TotalRead);
-    Status::update(value, Computer::TotalWrite);
-    Status::update(value, Computer::NetReceive);
-    Status::update(value, Computer::NetTransmit);
-    Status::update(value, Computer::Battery);
-    Status::update(value, Computer::UpTime);
-    Status::update(value, Computer::BootTime);
+fn flush(value: &mut Status){
+    let info = infodump::Status::getinfo();
+    value.cpu_usage = info.cpu_usage;
+    value.memory_total = info.memory_total;
+    value.memory_used = info.memory_used;
+    value.disk_read = info.disk_read;
+    value.disk_write = info.disk_write;
+    value.tdisk_read = info.tdisk_read;
+    value.tdisk_write = info.tdisk_write;
+    value.network_receive = info.network_receive;
+    value.network_transmit = info.network_transmit;
+    value.battery = info.battery.remaining_capacity;
+    value.uptime = info.uptime;
+    value.boottime = info.boottime;
 }
 
 impl Status{
 fn update(&mut self, message: Computer) {
     let info = infodump::Status::getinfo();
+    self.last_update = iced::time::Instant::now().elapsed().as_secs_f32();
     match message {
         Computer::CpuUsage => self.cpu_usage = info.cpu_usage,
         Computer::MemoryUsed => {
@@ -83,8 +87,12 @@ fn update(&mut self, message: Computer) {
         Computer::Battery => self.battery = info.battery.remaining_capacity,
         Computer::UpTime => self.uptime = info.uptime,
         Computer::BootTime => self.boottime = info.boottime,
-        Computer::RefreshAll =>flush(self, message),
+        Computer::RefreshAll =>flush(self),
     }
+}
+
+fn subscription(&self) -> Subscription<Computer> {
+    iced::time::every(iced::time::Duration::from_secs(10)).map(|_| Computer::RefreshAll)
 }
 
 fn view(&self) -> Element<Computer> {
@@ -92,33 +100,33 @@ fn view(&self) -> Element<Computer> {
     column![
         row![text(" ")],
         row![button("Refresh").on_press(Computer::CpuUsage),
-            text(format!("CPU status as mean : {}",self.cpu_usage))
+            text(format!("CPU status : {}%",self.cpu_usage))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::MemoryUsed),
-            text(format!("Memory {}/{} Byte",self.memory_used,self.memory_total)),
+            text(format!("Memory : {}/{} Byte",self.memory_used,self.memory_total)),
             progress_bar(0.0..=self.memory_total.as_u64() as f32, self.memory_used.as_u64() as f32).width(100)
         ].spacing(20),
         row![button("Refresh").on_press(Computer::DiskRead),
-            text(format!("Disk Input {}/{}",self.disk_read,self.tdisk_read))
+            text(format!("Disk Input : {}/{}",self.disk_read,self.tdisk_read))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::DiskWrite),
-            text(format!("Disk Output {}/{}",self.disk_write,self.tdisk_write))
+            text(format!("Disk Output : {}/{}",self.disk_write,self.tdisk_write))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::NetReceive),
-            text(format!("Network Received {} B",self.network_receive))
+            text(format!("Network Received : {} B",self.network_receive))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::NetTransmit),
-            text(format!("Network Transmitted {} B",self.network_transmit))
+            text(format!("Network Transmitted : {} B",self.network_transmit))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::Battery),
-            text(format!("Battery Status {}%",self.battery*100.0)),
+            text(format!("Battery Status : {}%",self.battery*100.0)),
             progress_bar(0.0..=100.0, self.battery*100.0).width(100)
         ].spacing(20),
         row![button("Refresh").on_press(Computer::BootTime),
-            text(format!("System booted since {} ",time_convert(self.boottime)))
+            text(format!("System booted since : {} ",time_convert(self.boottime)))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::UpTime),
-            text(format!("System running since {} ",time_convert(self.uptime)))
+            text(format!("System running since : {} ",time_convert(self.uptime)))
         ].spacing(20),
         row![button("Refresh All").on_press(Computer::RefreshAll)].spacing(20),
     ].align_x(Left).width(Fill).height(Fill).spacing(10)
