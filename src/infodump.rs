@@ -20,6 +20,7 @@ impl Status{
     pub fn getinfo()->Status{
         let mut info = System::new_all();
         info.refresh_all();
+        std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
         let total_cpu = info.global_cpu_usage();
 
         let mut total_read = 0;

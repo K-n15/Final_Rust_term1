@@ -23,7 +23,9 @@ enum Computer {
     Battery,
     UpTime,
     BootTime,
+    RefreshAll,
 }
+
 
 #[derive(Default)]
 struct Status {
@@ -65,6 +67,20 @@ fn update(value: &mut Status, message: Computer) {
         Computer::Battery => value.battery = info.battery.remaining_capacity,
         Computer::UpTime => value.uptime = info.uptime,
         Computer::BootTime => value.boottime = info.boottime,
+        Computer::RefreshAll =>{
+        update(value, Computer::CpuUsage);
+        update(value, Computer::MemoryUsed);
+        update(value, Computer::MemoryTotal);
+        update(value, Computer::DiskRead);
+        update(value, Computer::DiskWrite);
+        update(value, Computer::TotalRead);
+        update(value, Computer::TotalWrite);
+        update(value, Computer::NetReceive);
+        update(value, Computer::NetTransmit);
+        update(value, Computer::Battery);
+        update(value, Computer::UpTime);
+        update(value, Computer::BootTime);
+        }
     }
 }
 
