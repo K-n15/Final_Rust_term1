@@ -1,7 +1,7 @@
-use iced::{alignment::Horizontal::Left, widget::{button, column, container, progress_bar, row,text}, Alignment::Center, Element, Length::Fill, Subscription};
+use iced::{alignment::Horizontal::Left, widget::{button, column, container, row,text}, Alignment::Center, Element, Length::Fill, Subscription};
 use systemstat::ByteSize;
 
-pub mod infodump;
+mod libraries;
 
 fn main() -> iced::Result {
     iced::application("Status Manager", Status::update, Status::view)
@@ -40,54 +40,52 @@ struct Status {
     network_receive : u64,
     network_transmit : u64,
     battery : f32,
-    uptime : u64,
-    boottime : u64,
+    uptime : String,
+    boottime : String,
     last_update : f32,
 }
 
 fn flush(value: &mut Status){
-    let info = infodump::Status::getinfo();
-    value.cpu_usage = info.cpu_usage;
-    value.memory_total = info.memory_total;
-    value.memory_used = info.memory_used;
-    value.disk_read = info.disk_read;
-    value.disk_write = info.disk_write;
-    value.tdisk_read = info.tdisk_read;
-    value.tdisk_write = info.tdisk_write;
-    value.network_receive = info.network_receive;
-    value.network_transmit = info.network_transmit;
-    value.battery = info.battery.remaining_capacity;
-    value.uptime = info.uptime;
-    value.boottime = info.boottime;
+    value.cpu_usage = libraries::cpuusage::cpu_usage();
+    value.memory_total = libraries::memory::memory_usage().1;
+    value.memory_used = libraries::memory::memory_usage().0;
+    value.disk_read = libraries::disk::disk_read().0;
+    value.disk_write = libraries::disk::disk_write().0;
+    value.tdisk_read = libraries::disk::disk_read().1;
+    value.tdisk_write = libraries::disk::disk_write().1;
+    value.network_receive = libraries::network::network_status().0;
+    value.network_transmit = libraries::network::network_status().1;
+    value.battery = libraries::battery::get_battery().remaining_capacity;
+    value.uptime = libraries::uptime::get_uptime();
+    value.boottime = libraries::boottime::boot_time();
 }
 
 impl Status{
 fn update(&mut self, message: Computer) {
-    let info = infodump::Status::getinfo();
     self.last_update = iced::time::Instant::now().elapsed().as_secs_f32();
     match message {
-        Computer::CpuUsage => self.cpu_usage = info.cpu_usage,
+        Computer::CpuUsage => self.cpu_usage = libraries::cpuusage::cpu_usage(),
         Computer::MemoryUsed => {
             Status::update(self, Computer::MemoryTotal);
-            self.memory_used = info.memory_used
+            self.memory_used = libraries::memory::memory_usage().0
         },
-        Computer::MemoryTotal => self.memory_total = info.memory_total,
+        Computer::MemoryTotal => self.memory_total = libraries::memory::memory_usage().1,
         Computer::DiskRead => {
             Status::update(self, Computer::TotalRead);
-            self.disk_read = info.disk_read
+            self.disk_read = libraries::disk::disk_read().0
         },
         Computer::DiskWrite => {
             Status::update(self, Computer::TotalWrite);
-            self.disk_write = info.disk_write
+            self.disk_write = libraries::disk::disk_write().0
         },
-        Computer::TotalRead => self.tdisk_read = info.tdisk_read,
-        Computer::TotalWrite => self.tdisk_write = info.tdisk_write,
-        Computer::NetReceive => self.network_receive = info.network_receive,
-        Computer::NetTransmit => self.network_transmit = info.network_transmit,
-        Computer::Battery => self.battery = info.battery.remaining_capacity,
-        Computer::UpTime => self.uptime = info.uptime,
-        Computer::BootTime => self.boottime = info.boottime,
-        Computer::RefreshAll =>flush(self),
+        Computer::TotalRead => self.tdisk_read = libraries::disk::disk_read().1,
+        Computer::TotalWrite => self.tdisk_write = libraries::disk::disk_write().1,
+        Computer::NetReceive => self.network_receive = libraries::network::network_status().0,
+        Computer::NetTransmit => self.network_transmit = libraries::network::network_status().1,
+        Computer::Battery => self.battery = libraries::battery::get_battery().remaining_capacity,
+        Computer::UpTime => self.uptime = libraries::uptime::get_uptime(),
+        Computer::BootTime => self.boottime = libraries::boottime::boot_time(),
+        Computer::RefreshAll =>{flush(self);},
     }
 }
 
@@ -103,8 +101,7 @@ fn view(&self) -> Element<Computer> {
             text(format!("CPU status : {}%",self.cpu_usage))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::MemoryUsed),
-            text(format!("Memory : {}/{} Byte",self.memory_used,self.memory_total)),
-            progress_bar(0.0..=self.memory_total.as_u64() as f32, self.memory_used.as_u64() as f32).width(100)
+            text(format!("Memory : {}/{} Byte",self.memory_used,self.memory_total))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::DiskRead),
             text(format!("Disk Input : {}/{}",self.disk_read,self.tdisk_read))
@@ -120,25 +117,15 @@ fn view(&self) -> Element<Computer> {
         ].spacing(20),
         row![button("Refresh").on_press(Computer::Battery),
             text(format!("Battery Status : {}%",self.battery*100.0)),
-            progress_bar(0.0..=100.0, self.battery*100.0).width(100)
         ].spacing(20),
         row![button("Refresh").on_press(Computer::BootTime),
-            text(format!("System booted since : {} ",time_convert(self.boottime)))
+            text(format!("System booted since : {} ",self.boottime))
         ].spacing(20),
         row![button("Refresh").on_press(Computer::UpTime),
-            text(format!("System running since : {} ",time_convert(self.uptime)))
+            text(format!("System running since : {} ",self.uptime))
         ].spacing(20),
         row![button("Refresh All").on_press(Computer::RefreshAll)].spacing(20),
     ].align_x(Left).width(Fill).height(Fill).spacing(10)
     ).align_x(Center).align_y(Center).into()
 }
-}
-fn time_convert(x:u64)->String{
-    if x >= 3600{
-        format!("{} hours",x/3600)
-    } else if x >=60 {
-        format!("{} minutes",x/60)
-    } else {
-        format!("{} seconds",x)
-    }
 }
