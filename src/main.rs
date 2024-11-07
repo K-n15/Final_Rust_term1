@@ -26,7 +26,8 @@ enum Computer {
     Battery,
     UpTime,
     BootTime,
-    RefreshAll
+    RefreshAll,
+    FirstOperation,
 }
 
 #[derive(Default)]
@@ -44,7 +45,8 @@ struct Status {
     uptime : String,
     boottime : String,
     last_update : f32,
-    dictionary : HashMap<String,Vec<String>>
+    dictionary : HashMap<String,Vec<String>>,
+    first_operation : bool,
 }
 
 fn flush(value: &mut Status){
@@ -103,12 +105,29 @@ impl Status{
             Computer::Battery => self.battery = libraries::battery::get_battery().remaining_capacity,
             Computer::UpTime => self.uptime = libraries::uptime::get_uptime(),
             Computer::BootTime => self.boottime = libraries::boottime::boot_time(),
-            Computer::RefreshAll =>{flush(self);},
+            Computer::RefreshAll =>{
+                println!("Hi");
+                flush(self);
+                log_handler::record_log(self.dictionary.clone());
+            },
+            Computer::FirstOperation => {
+                self.first_operation = false;
+                let new = log_handler::open_log().expect("Failed to find file");
+                self.dictionary = log_handler::readrecord_file(new);
+                println!("{:?}",self.dictionary)
+            },
         }
     }
 
     fn subscription(&self) -> Subscription<Computer> {
-        iced::time::every(iced::time::Duration::from_secs(10)).map(|_| Computer::RefreshAll)
+        match self.first_operation{
+            true => {
+                iced::time::every(iced::time::Duration::from_secs(10)).map(|_| Computer::FirstOperation)
+            },
+            false => {
+                iced::time::every(iced::time::Duration::from_secs(10)).map(|_| Computer::RefreshAll)
+            },
+        }
     }
 
     fn view(&self) -> Element<Computer> {
