@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use iced::{alignment::Horizontal::Left, widget::{button, column, container, row,text}, Alignment::Center, Element, Length::Fill, Subscription};
 use systemstat::ByteSize;
 
@@ -30,7 +29,6 @@ enum Computer {
     RefreshAll
 }
 
-
 #[derive(Default)]
 struct Status {
     cpu_usage : f32,
@@ -46,23 +44,38 @@ struct Status {
     uptime : String,
     boottime : String,
     last_update : f32,
-    log : HashMap<String,Vec<String>>
+    dictionary : HashMap<String,Vec<String>>
 }
-
 
 fn flush(value: &mut Status){
     value.cpu_usage = libraries::cpuusage::cpu_usage();
+    apply(value, String::from("CPU"), value.cpu_usage.to_string());
     value.memory_total = libraries::memory::memory_usage().1;
+    apply(value, String::from("MEMORY_TOTAL"), value.memory_total.to_string());
     value.memory_used = libraries::memory::memory_usage().0;
+    apply(value, String::from("MEMORY_USED"), value.memory_used.to_string());
     value.disk_read = libraries::disk::disk_read().0;
+    apply(value, String::from("DISK_READ"), value.disk_read.to_string());
     value.disk_write = libraries::disk::disk_write().0;
+    apply(value, String::from("DISK_WRITE"), value.disk_write.to_string());
     value.tdisk_read = libraries::disk::disk_read().1;
+    apply(value, String::from("TOTAL_DISK_READ"), value.tdisk_read.to_string());
     value.tdisk_write = libraries::disk::disk_write().1;
+    apply(value, String::from("TOTAL_DISK_WRITE"), value.tdisk_write.to_string());
     value.network_receive = libraries::network::network_status().0;
+    apply(value, String::from("NETWORK_RECEIVED"), value.network_receive.to_string());
     value.network_transmit = libraries::network::network_status().1;
+    apply(value, String::from("NETWORK_TRANSMIT"), value.network_transmit.to_string());
     value.battery = libraries::battery::get_battery().remaining_capacity;
+    apply(value, String::from("BATTERY"), value.battery.to_string());
     value.uptime = libraries::uptime::get_uptime();
+    apply(value, String::from("UPTIME"), value.uptime.to_string());
     value.boottime = libraries::boottime::boot_time();
+    apply(value, String::from("BOOTTIME"), value.boottime.to_string());
+}
+
+fn apply(value: &mut Status, message: String,element : String){
+    value.dictionary.entry(message).or_insert(vec![]).push(element);
 }
 
 impl Status{
@@ -129,7 +142,6 @@ impl Status{
             row![button("Refresh").on_press(Computer::UpTime),
                 text(format!("System running since : {} ",self.uptime))
             ].spacing(20),
-            row![button("Refresh All").on_press(Computer::RefreshAll)].spacing(20),
         ].align_x(Left).width(Fill).height(Fill).spacing(10)
         ).align_x(Center).align_y(Center).into()
     }

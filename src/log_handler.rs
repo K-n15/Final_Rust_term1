@@ -3,10 +3,6 @@ use std::fs::File;
 use std::io::{BufRead,BufReader,Write};
 use std::path::Path;
 
-pub struct Log{
-    dictionary : HashMap<String,Vec<String>>
-}
-
 pub fn open_log()->Option<File>{
     if Path::new(&String::from("log.txt")).exists(){
         let new = File::open(&String::from("log.txt"));
