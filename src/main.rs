@@ -8,7 +8,7 @@ mod log_handler;
 fn main() -> iced::Result {
     iced::application("Status Manager", Status::update, Status::view)
     .subscription(Status::subscription)
-    .window_size(iced::Size { width: 500.0, height: 500.0 } )
+    .window_size(iced::Size { width: 400.0, height: 420.0 } )
     .run()
 }
 
@@ -106,25 +106,24 @@ impl Status{
             Computer::UpTime => self.uptime = libraries::uptime::get_uptime(),
             Computer::BootTime => self.boottime = libraries::boottime::boot_time(),
             Computer::RefreshAll =>{
-                println!("Hi");
                 flush(self);
                 log_handler::record_log(self.dictionary.clone());
             },
             Computer::FirstOperation => {
-                self.first_operation = false;
+                self.first_operation = true;
                 let new = log_handler::open_log().expect("Failed to find file");
-                self.dictionary = log_handler::readrecord_file(new);
-                println!("{:?}",self.dictionary)
+                let temp = log_handler::readrecord_file(new);
+                self.dictionary = temp;
             },
         }
     }
 
     fn subscription(&self) -> Subscription<Computer> {
         match self.first_operation{
-            true => {
+            false => {
                 iced::time::every(iced::time::Duration::from_secs(10)).map(|_| Computer::FirstOperation)
             },
-            false => {
+            true => {
                 iced::time::every(iced::time::Duration::from_secs(10)).map(|_| Computer::RefreshAll)
             },
         }

@@ -26,9 +26,12 @@ pub fn readrecord_file(x:File)->HashMap<String,Vec<String>>{
         let mut word: Vec<String> = Vec::new();
         match i {
             Ok(k)=>{
-                word = k.split_whitespace().into_iter().map(|x|x.to_string()).collect();
+                let mut temp:String = k.split("[").collect();
+                temp = temp.split("]").collect();
+                temp = temp.split("\"").collect();
+                word = temp.split(", ").into_iter().map(|x|x.to_string()).collect();
             },
-            Err(_e)=>continue
+            Err(e)=>println!("Error : {}",e)
         }
         let name = word[0].clone();
         word.remove(0);
